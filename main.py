@@ -1,4 +1,5 @@
 from datetime import datetime
+import heapq
 
 
 class Cab:
@@ -12,6 +13,8 @@ class Cab:
 
 
 class RideRequest:
+    next_number = 0
+
     def __init__(self, student_name, destination, time_slot, year):
         self.student_name = student_name
         self.destination = destination
@@ -19,34 +22,39 @@ class RideRequest:
         self.year = year
         self.submission_time = datetime.now()
 
+        self.request_number = RideRequest.next_number
+        RideRequest.next_number += 1
 
-def find_matches(cabs, waiting_requests):
-    ordered_requests = sorted(
-        waiting_requests,
-        key=lambda request: request.year,
-        reverse=True
+
+def add_request(waiting_requests, request):
+    trip = (request.destination, request.time_slot)
+
+    heapq.heappush(
+        waiting_requests[trip],
+        (-request.year, request.request_number, request)
     )
 
-    selected_students = []
+
+def find_matches(cabs, waiting_requests):
+    temporary_queues = {}
+
+    for trip, queue in waiting_requests.items():
+        temporary_queues[trip] = queue.copy()
+
     matches_by_cab = {}
 
     for cab in cabs:
         if cab.has_left:
             continue
 
+        trip = (cab.destination, cab.time_slot)
+        queue = temporary_queues[trip]
         cab_matches = []
 
-        for student in ordered_requests:
-            if student in selected_students:
-                continue
-
-            if (
-                student.destination == cab.destination
-                and student.time_slot == cab.time_slot
-                and len(cab_matches) < cab.capacity
-            ):
-                selected_students.append(student)
-                cab_matches.append(student)
+        while queue and len(cab_matches) < cab.capacity:
+            entry = heapq.heappop(queue)
+            student = entry[2]
+            cab_matches.append(student)
 
         matches_by_cab[cab] = cab_matches
 
@@ -82,12 +90,22 @@ om = RideRequest("Om", "Delhi", "Night", 5)
 
 cabs = [cab1, cab2, cab3, cab4, cab5, cab6]
 
-waiting_requests = [
+test_requests = [
     aditi, vikram, meera, riya,
     arjun, neha, kabir, isha,
     rohan, sana, dev, tara,
     aman, priya, zoya, om
 ]
+
+waiting_requests = {}
+
+for destination in ("Delhi", "Jaipur"):
+    for time_slot in ("Morning", "Afternoon", "Evening", "Night"):
+        trip = (destination, time_slot)
+        waiting_requests[trip] = []
+
+for request in test_requests:
+    add_request(waiting_requests, request)
 
 
 # MENU
@@ -121,31 +139,40 @@ while True:
                 print("Enter a whole number.")
 
         while True:
-            time_slot = input("Enter your desired time slot ""(Morning/Afternoon/Evening/Night): ").strip().title()
+            time_slot = input(
+                "Enter your desired time slot "
+                "(Morning/Afternoon/Evening/Night): "
+            ).strip().title()
 
             if time_slot in ("Morning", "Afternoon", "Evening", "Night"):
                 break
             print("Enter Morning, Afternoon, Evening, or Night.")
 
         while True:
-            destination = input("Enter your desired destination (Delhi/Jaipur): ").strip().title()
+            destination = input(
+                "Enter your desired destination (Delhi/Jaipur): "
+            ).strip().title()
 
             if destination in ("Delhi", "Jaipur"):
                 break
             print("Enter Delhi or Jaipur.")
 
         request = RideRequest(name, destination, time_slot, year)
-        waiting_requests.append(request)
+        add_request(waiting_requests, request)
         print("Your request has been added to the waiting list.")
 
     elif user_req == 2:  # See other students and cabs waiting
         print("*Students*")
-        for travelling_student_name in waiting_requests:
-            if travelling_student_name.destination == "Delhi":
-                print(f"{travelling_student_name.student_name}, Delhi")
 
-            elif travelling_student_name.destination == "Jaipur":
-                print(f"{travelling_student_name.student_name}, Jaipur")
+        for queue in waiting_requests.values():
+            for entry in queue:
+                travelling_student_name = entry[2]
+
+                if travelling_student_name.destination == "Delhi":
+                    print(f"{travelling_student_name.student_name}, Delhi")
+
+                elif travelling_student_name.destination == "Jaipur":
+                    print(f"{travelling_student_name.student_name}, Jaipur")
 
         print("*Cab Drivers*")
         for cab_driver_name in cabs:
@@ -168,16 +195,19 @@ while True:
 
         print("*People with no seat*")
 
-        for student in waiting_requests:
-            if student not in selected_students:
-                print(
-                    f"{student.student_name}, "
-                    f"{student.destination}, {student.time_slot}"
-                )
+        for queue in waiting_requests.values():
+            for entry in queue:
+                student = entry[2]
+
+                if student not in selected_students:
+                    print(
+                        f"{student.student_name}, "
+                        f"{student.destination}, {student.time_slot}"
+                    )
 
     elif user_req == 4:  # Dispatch a cab
-        destination = input("Enter your destination: ")
-        time_slot = input("Enter your desired time_slot: ")
+        destination = input("Enter your destination: ").strip().title()
+        time_slot = input("Enter your desired time_slot: ").strip().title()
 
         chosen_cab = None
 
@@ -189,22 +219,25 @@ while True:
             ):
                 chosen_cab = cab
                 break
+
         if chosen_cab is None:
             print("No open cab is available for this trip.")
             continue
 
-        matches = find_matches([chosen_cab], waiting_requests)
-        passengers = matches[chosen_cab]
+        trip = (chosen_cab.destination, chosen_cab.time_slot)
+        queue = waiting_requests[trip]
 
-        if not passengers:
-            print("No Students on the cab")
+        if not queue:
+            print("No students are waiting for this trip.")
             continue
 
         passenger_names = []
 
-        for student in passengers:
+        while queue and len(chosen_cab.passengers) < chosen_cab.capacity:
+            entry = heapq.heappop(queue)
+            student = entry[2]
+
             chosen_cab.passengers.append(student)
-            waiting_requests.remove(student)
             passenger_names.append(student.student_name)
 
         chosen_cab.has_left = True
@@ -213,7 +246,6 @@ while True:
             f"{chosen_cab.driver_name} departed with "
             f"{', '.join(passenger_names)}."
         )
-
 
     elif user_req == 5:
         break
