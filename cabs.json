@@ -1,0 +1,38 @@
+[
+    {
+        "driver_name": "Raj",
+        "capacity": 2,
+        "destination": "Delhi",
+        "time_slot": "Morning"
+    },
+    {
+        "driver_name": "Ram",
+        "capacity": 4,
+        "destination": "Jaipur",
+        "time_slot": "Morning"
+    },
+    {
+        "driver_name": "Amit",
+        "capacity": 1,
+        "destination": "Delhi",
+        "time_slot": "Morning"
+    },
+    {
+        "driver_name": "Sunil",
+        "capacity": 2,
+        "destination": "Delhi",
+        "time_slot": "Evening"
+    },
+    {
+        "driver_name": "Mohan",
+        "capacity": 1,
+        "destination": "Jaipur",
+        "time_slot": "Evening"
+    },
+    {
+        "driver_name": "Rakesh",
+        "capacity": 3,
+        "destination": "Jaipur",
+        "time_slot": "Morning"
+    }
+]

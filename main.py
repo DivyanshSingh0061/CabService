@@ -1,5 +1,7 @@
 from datetime import datetime
+from pathlib import Path
 import heapq
+import json
 
 
 class Cab:
@@ -24,6 +26,109 @@ class RideRequest:
 
         self.request_number = RideRequest.next_number
         RideRequest.next_number += 1
+
+
+def load_cabs():
+    cab_file = Path(__file__).with_name("cabs.json")
+
+    try:
+        with open(cab_file, "r", encoding="utf-8") as file:
+            cab_data = json.load(file)
+
+    except FileNotFoundError:
+        print("Could not find cabs.json.")
+        print("Keep it in the same folder as your Python file.")
+        raise SystemExit(1)
+
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        print("cabs.json is not a valid UTF-8 JSON file.")
+        print("Check its formatting and try again.")
+        raise SystemExit(1)
+
+    except OSError as error:
+        print(f"Could not open cabs.json: {error}")
+        raise SystemExit(1)
+
+    if not isinstance(cab_data, list):
+        print("cabs.json must contain a list of cab details.")
+        raise SystemExit(1)
+
+    if not cab_data:
+        print("cabs.json contains no cabs.")
+        raise SystemExit(1)
+
+    cabs = []
+    cab_number = 0
+
+    for details in cab_data:
+        cab_number += 1
+
+        if not isinstance(details, dict):
+            print(f"Cab {cab_number} must contain a dictionary of details.")
+            raise SystemExit(1)
+
+        required_fields = [
+            "driver_name",
+            "capacity",
+            "destination",
+            "time_slot"
+        ]
+
+        for field in required_fields:
+            if field not in details:
+                print(f"Cab {cab_number} is missing '{field}'.")
+                raise SystemExit(1)
+
+        driver_name = details["driver_name"]
+        capacity = details["capacity"]
+        destination = details["destination"]
+        time_slot = details["time_slot"]
+
+        if not isinstance(driver_name, str):
+            print(f"Cab {cab_number}: driver_name must be text.")
+            raise SystemExit(1)
+
+        driver_name = driver_name.strip()
+
+        if not driver_name:
+            print(f"Cab {cab_number}: driver_name cannot be empty.")
+            raise SystemExit(1)
+
+        if type(capacity) is not int:
+            print(f"Cab {cab_number}: capacity must be a whole number.")
+            raise SystemExit(1)
+
+        if not 1 <= capacity <= 4:
+            print(f"Cab {cab_number}: capacity must be from 1 to 4.")
+            raise SystemExit(1)
+
+        if not isinstance(destination, str):
+            print(f"Cab {cab_number}: destination must be text.")
+            raise SystemExit(1)
+
+        destination = destination.strip().title()
+
+        if destination not in ("Delhi", "Jaipur"):
+            print(f"Cab {cab_number}: destination must be Delhi or Jaipur.")
+            raise SystemExit(1)
+
+        if not isinstance(time_slot, str):
+            print(f"Cab {cab_number}: time_slot must be text.")
+            raise SystemExit(1)
+
+        time_slot = time_slot.strip().title()
+
+        if time_slot not in ("Morning", "Afternoon", "Evening", "Night"):
+            print(
+                f"Cab {cab_number}: time_slot must be "
+                "Morning, Afternoon, Evening, or Night."
+            )
+            raise SystemExit(1)
+
+        cab = Cab(driver_name, capacity, destination, time_slot)
+        cabs.append(cab)
+
+    return cabs
 
 
 def add_request(waiting_requests, request):
@@ -61,14 +166,12 @@ def find_matches(cabs, waiting_requests):
     return matches_by_cab
 
 
-# TEST OBJECTS
+# LOAD CABS
 
-cab1 = Cab("Raj", 2, "Delhi", "Morning")
-cab2 = Cab("Ram", 4, "Jaipur", "Morning")
-cab3 = Cab("Amit", 1, "Delhi", "Morning")
-cab4 = Cab("Sunil", 2, "Delhi", "Evening")
-cab5 = Cab("Mohan", 1, "Jaipur", "Evening")
-cab6 = Cab("Rakesh", 3, "Jaipur", "Morning")
+cabs = load_cabs()
+
+
+# TEST OBJECTS
 
 # Requests are created in arrival order
 aditi = RideRequest("Aditi", "Delhi", "Morning", 3)
@@ -87,8 +190,6 @@ aman = RideRequest("Aman", "Jaipur", "Morning", 2)
 priya = RideRequest("Priya", "Jaipur", "Morning", 1)
 zoya = RideRequest("Zoya", "Jaipur", "Evening", 4)
 om = RideRequest("Om", "Delhi", "Night", 5)
-
-cabs = [cab1, cab2, cab3, cab4, cab5, cab6]
 
 test_requests = [
     aditi, vikram, meera, riya,
@@ -111,7 +212,8 @@ for request in test_requests:
 # MENU
 
 while True:
-    user_req = int(input('''
+    try:
+        user_req = int(input('''
     CAB POOL MATCHER
 
     1. Add a ride request
@@ -121,6 +223,10 @@ while True:
     5. Quit
 
     Choose an option: '''))
+
+    except ValueError:
+        print("Enter a whole number from 1 to 5.")
+        continue
 
     if user_req == 1:  # Add ride request
         while True:
@@ -163,24 +269,55 @@ while True:
 
     elif user_req == 2:  # See other students and cabs waiting
         print("*Students*")
+        students_waiting = False
 
         for queue in waiting_requests.values():
-            for entry in queue:
+            ordered_queue = sorted(queue)
+
+            for entry in ordered_queue:
                 travelling_student_name = entry[2]
+                students_waiting = True
 
-                if travelling_student_name.destination == "Delhi":
-                    print(f"{travelling_student_name.student_name}, Delhi")
+                print(
+                    f"{travelling_student_name.student_name}, "
+                    f"{travelling_student_name.destination}, "
+                    f"{travelling_student_name.time_slot}, "
+                    f"Year {travelling_student_name.year}"
+                )
 
-                elif travelling_student_name.destination == "Jaipur":
-                    print(f"{travelling_student_name.student_name}, Jaipur")
+        if not students_waiting:
+            print("No students are waiting.")
 
         print("*Cab Drivers*")
+
         for cab_driver_name in cabs:
-            print(cab_driver_name.driver_name)
+            if cab_driver_name.has_left:
+                status = "Departed"
+            else:
+                status = "Available"
+
+            print(
+                f"{cab_driver_name.driver_name}, "
+                f"{cab_driver_name.destination}, "
+                f"{cab_driver_name.time_slot}, "
+                f"Capacity: {cab_driver_name.capacity}, "
+                f"Status: {status}"
+            )
+
+            if cab_driver_name.has_left:
+                passenger_names = []
+
+                for student in cab_driver_name.passengers:
+                    passenger_names.append(student.student_name)
+
+                print(f"Passengers: {', '.join(passenger_names)}")
 
     elif user_req == 3:  # Find Matches
         matches = find_matches(cabs, waiting_requests)
         selected_students = []
+
+        if not matches:
+            print("No available cabs.")
 
         for cab, students in matches.items():
             show_student_matches = []
@@ -194,20 +331,42 @@ while True:
         # Waitlisted people
 
         print("*People with no seat*")
+        people_with_no_seat = False
 
         for queue in waiting_requests.values():
-            for entry in queue:
+            for entry in sorted(queue):
                 student = entry[2]
 
                 if student not in selected_students:
+                    people_with_no_seat = True
+
                     print(
                         f"{student.student_name}, "
                         f"{student.destination}, {student.time_slot}"
                     )
 
+        if not people_with_no_seat:
+            print("None.")
+
     elif user_req == 4:  # Dispatch a cab
-        destination = input("Enter your destination: ").strip().title()
-        time_slot = input("Enter your desired time_slot: ").strip().title()
+        while True:
+            destination = input(
+                "Enter your destination (Delhi/Jaipur): "
+            ).strip().title()
+
+            if destination in ("Delhi", "Jaipur"):
+                break
+            print("Enter Delhi or Jaipur.")
+
+        while True:
+            time_slot = input(
+                "Enter your desired time_slot "
+                "(Morning/Afternoon/Evening/Night): "
+            ).strip().title()
+
+            if time_slot in ("Morning", "Afternoon", "Evening", "Night"):
+                break
+            print("Enter Morning, Afternoon, Evening, or Night.")
 
         chosen_cab = None
 
@@ -249,6 +408,9 @@ while True:
 
     elif user_req == 5:
         break
+
+    else:
+        print("Choose an option from 1 to 5.")
 
 
 # for travelling_student_name in waiting_requests:
