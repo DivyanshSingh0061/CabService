@@ -105,18 +105,38 @@ while True:
     Choose an option: '''))
 
     if user_req == 1:  # Add ride request
-        name = input("Enter your name: ")
-        year = int(input("Enter your year: "))
-        time_slot = input("Enter your desired time slot: ")
-        destination = input("Enter your desired destination: ")
+        while True:
+            name = input("Enter your name: ").strip().title()
+            if name:
+                break
+            print("Name cannot be empty.")
 
-        request = RideRequest(
-            name.strip(),
-            destination.strip().title(),
-            time_slot.strip().title(),
-            year
-        )
+        while True:
+            try:
+                year = int(input("Enter your year (1-5): "))
+                if 1 <= year <= 5:
+                    break
+                print("Enter a year from 1 to 5.")
+            except ValueError:
+                print("Enter a whole number.")
+
+        while True:
+            time_slot = input("Enter your desired time slot ""(Morning/Afternoon/Evening/Night): ").strip().title()
+
+            if time_slot in ("Morning", "Afternoon", "Evening", "Night"):
+                break
+            print("Enter Morning, Afternoon, Evening, or Night.")
+
+        while True:
+            destination = input("Enter your desired destination (Delhi/Jaipur): ").strip().title()
+
+            if destination in ("Delhi", "Jaipur"):
+                break
+            print("Enter Delhi or Jaipur.")
+
+        request = RideRequest(name, destination, time_slot, year)
         waiting_requests.append(request)
+        print("Your request has been added to the waiting list.")
 
     elif user_req == 2:  # See other students and cabs waiting
         print("*Students*")
@@ -156,7 +176,44 @@ while True:
                 )
 
     elif user_req == 4:  # Dispatch a cab
-        pass
+        destination = input("Enter your destination: ")
+        time_slot = input("Enter your desired time_slot: ")
+
+        chosen_cab = None
+
+        for cab in cabs:
+            if (
+                not cab.has_left
+                and cab.destination == destination
+                and cab.time_slot == time_slot
+            ):
+                chosen_cab = cab
+                break
+        if chosen_cab is None:
+            print("No open cab is available for this trip.")
+            continue
+
+        matches = find_matches([chosen_cab], waiting_requests)
+        passengers = matches[chosen_cab]
+
+        if not passengers:
+            print("No Students on the cab")
+            continue
+
+        passenger_names = []
+
+        for student in passengers:
+            chosen_cab.passengers.append(student)
+            waiting_requests.remove(student)
+            passenger_names.append(student.student_name)
+
+        chosen_cab.has_left = True
+
+        print(
+            f"{chosen_cab.driver_name} departed with "
+            f"{', '.join(passenger_names)}."
+        )
+
 
     elif user_req == 5:
         break
