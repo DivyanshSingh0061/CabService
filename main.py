@@ -171,42 +171,12 @@ def find_matches(cabs, waiting_requests):
 cabs = load_cabs()
 
 
-# TEST OBJECTS
-
-# Requests are created in arrival order
-aditi = RideRequest("Aditi", "Delhi", "Morning", 3)
-vikram = RideRequest("Vikram", "Delhi", "Morning", 5)
-meera = RideRequest("Meera", "Jaipur", "Morning", 3)
-riya = RideRequest("Riya", "Jaipur", "Evening", 1)
-arjun = RideRequest("Arjun", "Delhi", "Morning", 5)
-neha = RideRequest("Neha", "Delhi", "Morning", 4)
-kabir = RideRequest("Kabir", "Delhi", "Morning", 3)
-isha = RideRequest("Isha", "Delhi", "Evening", 2)
-rohan = RideRequest("Rohan", "Delhi", "Evening", 5)
-sana = RideRequest("Sana", "Delhi", "Evening", 4)
-dev = RideRequest("Dev", "Jaipur", "Morning", 5)
-tara = RideRequest("Tara", "Jaipur", "Morning", 4)
-aman = RideRequest("Aman", "Jaipur", "Morning", 2)
-priya = RideRequest("Priya", "Jaipur", "Morning", 1)
-zoya = RideRequest("Zoya", "Jaipur", "Evening", 4)
-om = RideRequest("Om", "Delhi", "Night", 5)
-
-test_requests = [
-    aditi, vikram, meera, riya,
-    arjun, neha, kabir, isha,
-    rohan, sana, dev, tara,
-    aman, priya, zoya, om
-]
-
 waiting_requests = {}
 
 for destination in ("Delhi", "Jaipur"):
     for time_slot in ("Morning", "Afternoon", "Evening", "Night"):
         trip = (destination, time_slot)
         waiting_requests[trip] = []
-
-for request in test_requests:
-    add_request(waiting_requests, request)
 
 
 # MENU
@@ -300,7 +270,7 @@ while True:
                 f"{cab_driver_name.driver_name}, "
                 f"{cab_driver_name.destination}, "
                 f"{cab_driver_name.time_slot}, "
-                f"Capacity: {cab_driver_name.capacity}, "
+                f"Seats: {len(cab_driver_name.passengers)}/{cab_driver_name.capacity}, "
                 f"Status: {status}"
             )
 
@@ -411,7 +381,3 @@ while True:
 
     else:
         print("Choose an option from 1 to 5.")
-
-
-# for travelling_student_name in waiting_requests:
-#     print(travelling_student_name.student_name, travelling_student_name.submission_time)
